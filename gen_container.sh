@@ -56,7 +56,7 @@ DOCKERFILE_PATH="/data/sjy/dockerfile/dockerfile"
 DOCKER_COMPOSE_DIR="/data/sjy/dockerfile/srv${TARGET_SERVER}"
 DOCKER_COMPOSE_FILE="${DOCKER_COMPOSE_DIR}/docker-compose.yaml"
 DEFAULT_SETTINGS_FILE="/data/sjy/dockerfile/default_container_settings.yaml"
-USER_HOME_DIR=$(cat /etc/passwd | grep -o '^$SET_USER_NAME:x.*' | awk -F ':' '{print $6}')
+USER_HOME_DIR=$(cat /etc/passwd | grep $SET_USER_NAME | awk -F ':' '{ print $6; }')
 
 # 디렉토리가 없으면 생성
 if [ ! -d "$DOCKER_COMPOSE_DIR" ]; then
@@ -75,20 +75,8 @@ fi
 
 # SET_CONTAINER_NAME 서비스가 이미 있는지 검사
 if grep -q " $SET_CONTAINER_NAME:$" "$DOCKER_COMPOSE_FILE"; then
-    echo -n "컨테이너 $SET_CONTAINER_NAME가 이미 존재합니다. 삭제하고 다시 만드시겠습니까? [Yy/Nn]"
-    read CONFIRM_DELETE
-    if [[ $CONFIRM_DELETE ~= ^[Yy]$ ]]; then
-        # 실행 중이면 stop
-        IS_RUNNING=$(docker ps -a | grep -o ' ${SET_CONTAINER_NAME}$' | awk '{ split($1,a," "); print a[1]; }')
-        if [ ! -z "$IS_RUNNING" ]; then
-            sudo docker stop $SET_CONTAINER_NAME
-            sudo docker rm $SET_CONTAINER_NAME
-        fi
-        # docker-compose.yaml 파일에서 해당 부분 삭제..!
-        
-        sleep 0.5
-    fi
-    exit 0
+    echo "Error: Container $SET_CONTAINER_NAME already exists in $DOCKER_COMPOSE_FILE"
+    exit 1
 else
     # DOCKER IMAGE PATH로 새로운 dockerfile을 임시로 만듦
     DOCKERFILE_CONTENT=$(sed "s@FROM .*@FROM ${DOCKER_IMAGE_PATH}@g" "$DOCKERFILE_PATH")
@@ -106,7 +94,7 @@ else
     SERVICE_CONTENT=$(sed "s@\${SET_USER_NAME}@$SET_USER_NAME@g" "$DEFAULT_SETTINGS_FILE" | sed "s/dockerfile: dockerfile/dockerfile: $NEW_DOCKERFILE_NAME/g" | sed "s@image: .*@image: nlpai/cuda:$REPO_CUDA_VERSION@g" | sed "s@SET_CONTAINER_NAME@$SET_CONTAINER_NAME@g" | sed "s@SET_USER_HOME_DIR@$USER_HOME_DIR@g")
 
     # TARGET_SERVER의 docker-compose.yaml 파일에 서비스 추가
-    echo "$SERVICE_CONTENT5" >> "$DOCKER_COMPOSE_FILE"
+    echo "$SERVICE_CONTENT" >> "$DOCKER_COMPOSE_FILE"
     sleep 1
     # 생성된 docker_compose_file의 권한 설정: 모두가 접근 가능
     chgrp users $DOCKER_COMPOSE_FILE & chmod 777 $DOCKER_COMPOSE_FILE
@@ -115,7 +103,7 @@ else
         echo "Service $SET_USER_NAME has been added to $DOCKER_COMPOSE_FILE"
 
         # 이제 추가된 서비스를 컨테이너로 만들자.
-        sudo docker compose -f $DOCKER_COMPOSE_FILE up -d $SET_CONTAINER_NAME
+        sudo docker compose -f $DOCKER_COMPOSE_FILE up --build -d $SET_CONTAINER_NAME
         sudo docker compose -f $DOCKER_COMPOSE_FILE ps
     else
         echo "뭔가 뭔가 문제 발생... 아마 sed와 같은 문자열 관련 이슈일 것 같음..! 관리자에게 문의 바람..!"
