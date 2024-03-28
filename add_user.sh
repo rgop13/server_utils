@@ -1,6 +1,7 @@
 #!/bin/bash
 SET_USER_NAME=$1
 SET_PASSWORD=$2
+MAIN_SERVER=$3
 SET_HOMEDIR=/mnt/raid6/$SET_USER_NAME
 
 # 먼저, 해당 서버에 계정이 있는지 확인하자!
@@ -13,7 +14,7 @@ fi
 ALL_USERS_FILE=/data/sjy/passwd/all_user_ids
 CONFIRM_GLOBAL_NAME=$(cat $ALL_USERS_FILE | grep '^$SET_USER_NAME:' | awk -F ':' '{print $1}')
 # unique uid를 설정한다. 
-if [[ "$(hostname)" == "nlp-server-6" ]] && [[ "$CONFIRM_GLOBAL_NAME" != "$SET_USER_NAME" ]]; then
+if [[ "$MAIN_SERVER" == "$(hostname)" ]] && [[ "$CONFIRM_GLOBAL_NAME" != "$SET_USER_NAME" ]]; then
 	echo "Server 6: Process Unique uid"
 	SET_UID=$(tail $ALL_USERS_FILE -n 1 | awk -F ':' '{print $2+1}')
 	echo "@SET_USER_NAME:$SET_UID" | tee -a $ALL_USERS_FILE
@@ -45,8 +46,13 @@ if [ -n "$SET_UID" ]; then
 	echo "Done! ($SET_USER_NAME:$SET_UID)"
 	# 다시 ! 이벤트 감지를 킴
 	set -H
+
+	if [[ "$MAIN_SERVER" == "$(hostname)" ]]; then
+		# Main server로 동작하는 서버만 data center에 접근하여 docker에 추가
+		tail -n 1 /etc/passwd | tee -a /data/sjy/dockerfile/import/passwd
+		tail -n 1 /etc/shadow | tee -a /data/sjy/dockerfile/import/shadow
+	fi
+
+	# docker container에 추가 # exec 테스트 필요
+	docker compose exec "useradd -d $SET_HOMEDIR -g users -u $SET_UID && usermod -aG docker $SET_USER_NAME && echo -e "$SET_PASSWORD\n$SET_PASSWORD\n" | passwd $SET_USER_NAME;"
 fi
-
-# TODO: 이제 해당 유저 정보를 /data/sjy/dockerfile/import/passwd 및 /data/sjy/dockerfile/import/shadow 에 추가 
-
-# TODO: 이후, docker compose를 활용하여 모든 docker에 해당 유저정보 추가
