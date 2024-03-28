@@ -46,3 +46,7 @@ if [ -n "$SET_UID" ]; then
 	# 다시 ! 이벤트 감지를 킴
 	set -H
 fi
+
+# TODO: 이제 해당 유저 정보를 /data/sjy/dockerfile/import/passwd 및 /data/sjy/dockerfile/import/shadow 에 추가 
+
+# TODO: 이후, docker compose를 활용하여 모든 docker에 해당 유저정보 추가
