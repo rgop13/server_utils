@@ -78,6 +78,7 @@ if __name__ == '__main__':
                     'services': services,
                 }, f)
             os.system(f"chmod 777 {target_yaml_path}")
+            os.system("sudo docker image prune -af")
             print(f"Docker container {set_cname}가 stop, rm 처리 되었고, docker-compose.yaml 서비스 목록에서 제거되었습니다.")
         elif select == '2':
             # 2. 이름 변경

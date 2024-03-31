@@ -35,4 +35,5 @@ if __name__ == '__main__':
         yaml.dump({
             'services': services,
         }, f)
+    os.system("sudo docker image prune -af")
     print(f"Docker container {to_delete_container}가 stop, rm 처리 되었고, srv{target_server}/docker-compose.yaml 서비스 목록에서 제거되었습니다.")
